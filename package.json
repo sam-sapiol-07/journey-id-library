@@ -1,5 +1,5 @@
 {
-  "name": "journeyid-sdk",
+  "name": "journeyid-sdk2",
   "version": "0.1.0",
   "description": "journey authentication and enrollment library.",
   "main": "./dist/index.js",
