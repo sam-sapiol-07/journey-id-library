@@ -1,2 +1,2 @@
-export { JourneyID, AuthType, DeliveryMethod } from "./journeyid";
+export { JourneyID, AuthType, DeliveryMethod, ExecutionEvents } from "./journeyid";
 export * from "./types";

@@ -1,6 +1,6 @@
 {
   "name": "journeyid-sdk2",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "journey authentication and enrollment library.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,7 +17,9 @@
     "sdk",
     "iframe",
     "websocket",
-    "auth"
+    "auth",
+    "journeyid-sdk2",
+    "journeyid-sdk"
   ],
   "author": {
     "name": "sammy",

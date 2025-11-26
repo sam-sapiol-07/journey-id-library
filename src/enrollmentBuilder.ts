@@ -10,15 +10,15 @@ import { PipelineResolver } from "./pipelineResolver";
 import { WebSocketClient } from "./websocketClient";
 
 /**
- * AuthBuilder: returned by journey.authenticate(uniqueId)
+ * EnrollmentBuilder - returned by journey.enroll(userData)
  * chainable .type().delivery().start()
  */
-export class AuthBuilder {
+export class EnrollmentBuilder {
   private chosenAuthType?: AuthType;
   private chosenDelivery?: DeliveryMethod;
 
   constructor(
-    private uniqueId: string,
+    private userData: Partial<Customer>,
     private cfg: JourneyIDConfig,
     private api: ApiClient,
     private resolver: PipelineResolver
@@ -27,37 +27,65 @@ export class AuthBuilder {
     this.chosenDelivery = cfg.defaultDelivery;
   }
 
-  type(auth: AuthType): AuthBuilder {
+  type(auth: AuthType): EnrollmentBuilder {
     this.chosenAuthType = auth;
     return this;
   }
 
-  delivery(delivery: DeliveryMethod): AuthBuilder {
+  delivery(delivery: DeliveryMethod): EnrollmentBuilder {
     this.chosenDelivery = delivery;
     return this;
   }
 
   /**
-   * start() — performs lookup, resolves pipelineKey, tries delivery + fallbacks,
-   * creates execution, then connects websocket and returns a connected WebSocketClient
+   * start() — creates or looks up customer, resolves pipelineKey (enrollment pipelines),
+   * creates execution (enrollment), then connects websocket and returns connected client + execution + customer
    */
   async start(): Promise<{
     sessionClient: WebSocketClient;
     execution: ExecutionResponse;
     customer: Customer;
   }> {
-    const customer = await this.api.lookupCustomer(this.uniqueId);
+    let customer = this.userData;
+    // 1) ensure customer exists: if uniqueId provided try lookup; else create
+    // let customer: Customer | undefined;
 
-    const pipelineKey = this.resolver.resolve(
+    // if (this.userData.uniqueId) {
+    //   try {
+    //     customer = await this.api.lookupCustomer(this.userData.uniqueId);
+    //   } catch {
+    //     customer = undefined;
+    //   }
+    // }
+
+    // if (!customer) {
+    //   // build minimal create payload (require uniqueId, firstName, lastName ideally)
+    //   const createPayload: any = {
+    //     uniqueId: this.userData.uniqueId ?? this.genTempUniqueId(),
+    //     firstName: this.userData.firstName ?? "Unknown",
+    //     lastName: this.userData.lastName ?? "User",
+    //   };
+    //   if (this.userData.email) createPayload.email = this.userData.email;
+    //   if (this.userData.phoneNumbers && this.userData.phoneNumbers[0])
+    //     createPayload.phoneNumber = this.userData.phoneNumbers[0];
+    //   else if ((this.userData as any).phoneNumber)
+    //     createPayload.phoneNumber = (this.userData as any).phoneNumber;
+
+    //   customer = await this.api.createCustomer(createPayload);
+    // }
+
+    // 2) choose pipeline key (use enrollment pipelines first)
+    const pipelineKey = this.resolver.resolveEnrollment(
       this.chosenAuthType ?? AuthType.OTP,
       customer
     );
     if (!pipelineKey) {
       throw new Error(
-        `No pipeline configured for auth type ${this.chosenAuthType}`
+        `No enrollment pipeline configured for auth type ${this.chosenAuthType}`
       );
     }
 
+    // 3) build delivery tries
     const tries: DeliveryMethod[] = [];
     if (this.chosenDelivery) tries.push(this.chosenDelivery);
     if (this.cfg.fallbackDelivery) {
@@ -68,7 +96,6 @@ export class AuthBuilder {
 
     let execResp: ExecutionResponse | undefined;
     let lastErr: any;
-
     for (const method of tries) {
       try {
         const payload = this.buildExecutionPayload(
@@ -86,10 +113,13 @@ export class AuthBuilder {
     if (!execResp) {
       throw (
         lastErr ??
-        new Error("Failed to create execution for all delivery methods.")
+        new Error(
+          "Failed to create enrollment execution for all delivery methods."
+        )
       );
     }
 
+    // 4) derive userId and sessionId for websocket
     const sessionId =
       (execResp.session && (execResp.session as any).id) ??
       (execResp.session as string);
@@ -103,6 +133,7 @@ export class AuthBuilder {
       }
     }
 
+    // 5) connect websocket
     const wsUrl =
       `${this.cfg.baseUrl ?? "https://app.journeyid.io/api"}`.replace(
         /^https?/,
@@ -128,7 +159,8 @@ export class AuthBuilder {
     const deviceId = customer.devices?.[0]?.id ?? undefined;
     const userObj: any = {
       phoneNumber: phone,
-      uniqueId: customer.uniqueId ?? this.uniqueId,
+      uniqueId: customer.uniqueId,
+      id: customer.id,
     };
 
     const delivery: any = { method };
@@ -145,5 +177,10 @@ export class AuthBuilder {
       configuration: {},
       pipelineKey,
     };
+  }
+
+  private genTempUniqueId() {
+    // simple fallback: timestamp + random
+    return `tmp-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
   }
 }

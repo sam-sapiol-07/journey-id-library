@@ -18,6 +18,7 @@ export interface JourneyIDConfig {
   systemToken: string;
   iframeToken: string;
   pipelines?: PipelineMap;
+  enrollmentPipelines?: PipelineMap;
   defaultAuthType?: AuthType;
   defaultDelivery?: DeliveryMethod;
   fallbackDelivery?: DeliveryMethod[];
@@ -29,6 +30,7 @@ export interface Customer {
   uniqueId?: string;
   firstName?: string;
   lastName?: string;
+  email?: string;
   phoneNumbers?: string[];
   devices?: Array<{ id?: string; nickname?: string; device?: string }>;
   enrollments?: Array<{ type?: string }>;
@@ -42,3 +44,13 @@ export interface ExecutionResponse {
   user?: any;
   [k: string]: any;
 }
+
+export const ExecutionEvents = {
+  CREATED: "execution-created",
+  STARTED: "execution-started",
+  PROGRESS: "execution-progress",
+  COMPLETED: "execution-completed",
+} as const;
+
+export type ExecutionEventName =
+  (typeof ExecutionEvents)[keyof typeof ExecutionEvents];

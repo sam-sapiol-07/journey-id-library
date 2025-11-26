@@ -1,10 +1,4 @@
-import {
-  JourneyIDConfig,
-  Customer,
-  ExecutionResponse,
-  AuthType,
-  DeliveryMethod,
-} from "./types";
+import { JourneyIDConfig, Customer, ExecutionResponse } from "./types";
 
 export class ApiClient {
   private cfg: JourneyIDConfig;
@@ -58,6 +52,17 @@ export class ApiClient {
       undefined,
       true
     );
+  }
+
+  async createCustomer(payload: {
+    uniqueId: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phoneNumber?: string;
+    [k: string]: any;
+  }): Promise<Customer> {
+    return this.request<Customer>(`/system/customers`, "POST", payload, true);
   }
 
   async createExecution(payload: any): Promise<ExecutionResponse> {
