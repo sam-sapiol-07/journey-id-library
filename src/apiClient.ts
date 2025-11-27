@@ -59,7 +59,7 @@ export class ApiClient {
     firstName: string;
     lastName: string;
     email?: string;
-    phoneNumber?: string;
+    phoneNumbers?: string[];
     [k: string]: any;
   }): Promise<Customer> {
     return this.request<Customer>(`/system/customers`, "POST", payload, true);

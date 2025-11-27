@@ -3,6 +3,7 @@ import {
   AuthType,
   DeliveryMethod,
   ExecutionEvents,
+  Customer,
 } from "./types";
 import { ApiClient } from "./apiClient";
 import { PipelineResolver } from "./pipelineResolver";
@@ -39,7 +40,7 @@ export class JourneyID {
     firstName: string;
     lastName: string;
     email?: string;
-    phoneNumber?: string;
+    phoneNumbers?: string[];
     [k: string]: any;
   }) {
     return this.api.createCustomer(payload);
@@ -70,6 +71,10 @@ export class JourneyID {
     client.on("error", handler);
     client.on("closed", handler);
     return client;
+  }
+
+  async lookupCustomer(uniqueId: string): Promise<Customer> {
+    return this.api.lookupCustomer(uniqueId);
   }
 }
 
